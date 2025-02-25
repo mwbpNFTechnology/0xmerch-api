@@ -1,3 +1,5 @@
+// app/api/wallet/verifyWallet/route.js
+
 // Import the verifyMessage function from ethers to recover the signing address.
 import { verifyMessage } from 'ethers';
 // Import the global CORS helper function.

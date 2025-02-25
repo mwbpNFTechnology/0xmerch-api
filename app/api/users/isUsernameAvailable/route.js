@@ -1,62 +1,71 @@
-import admin from 'firebase-admin';
-import { setCorsHeaders } from '../../../lib/utils/cors'; // Adjust path as needed
+// app/api/users/isUsernameAvailable/route.js
 
-// Initialize Firebase Admin SDK if not already initialized.
-if (!admin.apps.length) {
-  admin.initializeApp({
-    credential: admin.credential.cert({
-      projectId: process.env.FIREBASE_PROJECT_ID, // Your Firebase project ID.
-      clientEmail: process.env.FIREBASE_CLIENT_EMAIL, // Your service account email.
-      // Use the private key from your environment variables. Replace escaped newlines with actual newlines if necessary.
-      privateKey: process.env.FIREBASE_PRIVATE_KEY.replace(/\\n/g, '\n'),
-    }),
-  });
+
+import { setCorsHeaders } from '../../../lib/utils/cors';
+import { getFirestoreInstance } from '../../../lib/utils/serverFirebaseUtils';
+
+// Retrieve the Firestore instance from our shared Firebase Admin utility.
+const firestore = getFirestoreInstance();
+
+/**
+ * Handles preflight OPTIONS requests.
+ * Browsers send these requests as part of CORS to verify that the actual request is allowed.
+ * This function returns a 204 No Content response with the necessary CORS headers.
+ *
+ * @returns {Promise<Response>} - A response with status 204 and CORS headers.
+ */
+export async function OPTIONS() {
+  const response = new Response(null, { status: 204 });
+  return setCorsHeaders(response);
 }
-
-const firestore = admin.firestore();
 
 /**
  * Handles GET requests to check if a username is available in the `publicUsers` collection.
- * Expects a query parameter `username`.
- * Returns a JSON response with { available: true } if the username is available,
- * or { available: false } if it is already taken.
+ * Expects a query parameter `username` in the URL.
  *
- * @returns {Promise<Response>} - A JSON response with the availability result.
+ * Example URL:
+ *   https://0xmerch-api.vercel.app/api/isUsernameAvailable?username=exampleUser
+ *
+ * JSON Response:
+ *   If available: { "available": true }
+ *   If taken:    { "available": false }
+ *
+ * @param {Request} request - The incoming HTTP request.
+ * @returns {Promise<Response>} - A JSON response indicating username availability.
  */
 export async function GET(request) {
   try {
-    // Parse the query parameter from the URL.
+    // Extract the 'username' query parameter from the request URL.
     const { searchParams } = new URL(request.url);
     const username = searchParams.get('username');
     
     if (!username) {
-      return new Response(JSON.stringify({ error: 'Missing username parameter' }), {
+      return setCorsHeaders(new Response(JSON.stringify({ error: 'Missing username parameter' }), {
         status: 400,
         headers: { 'Content-Type': 'application/json' },
-      });
+      }));
     }
     
-    // Reference the 'publicUsers' collection.
+    // Reference the "publicUsers" collection.
     const publicUsersRef = firestore.collection('publicUsers');
     
-    // Query for any document with a matching 'username'.
+    // Create a query to find any document with a matching 'username'.
     const snapshot = await publicUsersRef.where('username', '==', username).get();
     
-    // If the query returns empty, no user with that username exists.
+    // If the query snapshot is empty, no user with that username exists.
     const available = snapshot.empty;
     
-    // Create a response with the availability result.
+    // Return a JSON response with the availability status.
     const response = new Response(JSON.stringify({ available }), {
       status: 200,
       headers: { 'Content-Type': 'application/json' },
     });
-    
     return setCorsHeaders(response);
   } catch (error) {
     console.error('Error checking username availability:', error);
-    return new Response(JSON.stringify({ error: 'Server error' }), {
+    return setCorsHeaders(new Response(JSON.stringify({ error: 'Server error' }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' },
-    });
+    }));
   }
 }
