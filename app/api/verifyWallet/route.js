@@ -44,6 +44,7 @@ export async function POST(request) {
   try {
     // Retrieve the Firebase ID token from the Authorization header.
     const authHeader = request.headers.get('Authorization');
+    console.log('Authorization header:', authHeader);
     if (!authHeader) {
       return errorResponse('No Authorization header provided', 401);
     }
@@ -56,6 +57,8 @@ export async function POST(request) {
     // Verify the token to obtain the user ID.
     const decodedToken = await admin.auth().verifyIdToken(token);
     const userId = decodedToken.uid;
+
+    
 
     // Parse request body. Expecting address, nonce, signature, message, networkType.
     const { address, nonce, signature, message, networkType } = await request.json();
