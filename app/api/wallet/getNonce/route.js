@@ -1,8 +1,9 @@
-// Import Node.js crypto module to generate random values.
+// app/api/wallet/getNonce/route.js
+
 import crypto from 'crypto';
-// Import the global CORS helper function from our shared utility file.
+// Import the global CORS helper function.
 import { setCorsHeaders } from '../../../lib/utils/cors';
-// Import our new server-side Firebase utility.
+// Import our server-side Firebase utility to extract the user ID.
 import { getUserIdFromRequest } from '../../../lib/utils/serverFirebaseUtils';
 
 /**
@@ -20,15 +21,14 @@ export async function OPTIONS() {
 /**
  * Handles GET requests to generate and return a nonce.
  * This version requires the client to send a valid Firebase ID token in the Authorization header.
- * The server uses the token to determine the user and then generates a nonce.
+ * The server verifies the token to extract the user ID, then generates a nonce and returns it.
  *
  * @param {Request} request - The incoming HTTP request.
- * @returns {Promise<Response>} - A JSON response containing the generated nonce,
- * with CORS headers added.
+ * @returns {Promise<Response>} - A JSON response containing the generated nonce, with CORS headers added.
  */
 export async function GET(request) {
   try {
-    // Extract the user ID from the request by verifying the Firebase token.
+    // Extract the user ID from the request using our server-side utility.
     const userId = await getUserIdFromRequest(request);
     console.log('User ID from token:', userId);
     
