@@ -16,7 +16,7 @@ export async function OPTIONS() {
 }
 
 // Handles GET requests: returns a nonce with CORS headers added.
-export async function GET(request) {
+export async function GET() {
   const nonce = crypto.randomBytes(16).toString('hex');
   const response = new Response(JSON.stringify({ nonce }), {
     headers: { "Content-Type": "application/json" },
