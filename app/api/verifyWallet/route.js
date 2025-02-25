@@ -10,7 +10,7 @@ function setCorsHeaders(response) {
 
 // Helper function to create error responses with JSON.
 function errorResponse(message, statusCode) {
-  const body = JSON.stringify({ error: message });
+  const body = JSON.stringify({ verify: false, error: message });
   const response = new Response(body, {
     status: statusCode,
     headers: { 'Content-Type': 'application/json' },
@@ -43,8 +43,10 @@ export async function POST(request) {
       return errorResponse('Signature verification failed', 400);
     }
 
+    
+    // Verification successful
     const response = new Response(
-      JSON.stringify({ success: true, message: 'Wallet verified successfully' }),
+      JSON.stringify({ verify: true }),
       { status: 200, headers: { 'Content-Type': 'application/json' } }
     );
     return setCorsHeaders(response);
