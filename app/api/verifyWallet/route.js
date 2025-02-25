@@ -1,6 +1,6 @@
-import { ethers } from 'ethers';
+import { verifyMessage } from 'ethers';
 
-// Helper: set CORS headers (if needed)
+// Helper function to set CORS headers.
 function setCorsHeaders(response) {
   response.headers.set('Access-Control-Allow-Origin', '*');
   response.headers.set('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
@@ -8,46 +8,48 @@ function setCorsHeaders(response) {
   return response;
 }
 
+// Helper function to create error responses with JSON.
+function errorResponse(message, statusCode) {
+  const body = JSON.stringify({ error: message });
+  const response = new Response(body, {
+    status: statusCode,
+    headers: { 'Content-Type': 'application/json' },
+  });
+  return setCorsHeaders(response);
+}
+
+// Handle preflight OPTIONS requests.
 export async function OPTIONS() {
   const response = new Response(null, { status: 204 });
   return setCorsHeaders(response);
 }
 
+// Handle POST requests for wallet verification.
 export async function POST(request) {
   try {
     const { address, nonce, signature, message } = await request.json();
 
-    // Validate required fields
-    if (!address || !nonce || !signature || !message) {
-      return new Response(JSON.stringify({ error: 'Missing parameters' }), { status: 400 });
-    }
-
-    // Reconstruct the expected message
+    // Construct the expected message.
     const expectedMessage = `Welcome to 0xMerch!\n\nNonce: ${nonce}\n\nPlease sign this message to verify your wallet ownership.`;
 
-    // Verify that the signed message matches the expected message
     if (message !== expectedMessage) {
-      return new Response(JSON.stringify({ error: 'Message does not match' }), { status: 400 });
+      return errorResponse('Message does not match', 400);
     }
 
-    // Recover the address from the signature
-    const recoveredAddress = ethers.utils.verifyMessage(message, signature);
+    // Verify the signature.
+    const recoveredAddress = verifyMessage(message, signature);
 
     if (recoveredAddress.toLowerCase() !== address.toLowerCase()) {
-      return new Response(JSON.stringify({ error: 'Signature verification failed' }), { status: 400 });
+      return errorResponse('Signature verification failed', 400);
     }
 
-    // At this point, the wallet is verified.
-    // You can now save the verified wallet to your database if needed.
-    
-    const response = new Response(JSON.stringify({ success: true, message: 'Wallet verified successfully' }), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' },
-    });
+    const response = new Response(
+      JSON.stringify({ success: true, message: 'Wallet verified successfully' }),
+      { status: 200, headers: { 'Content-Type': 'application/json' } }
+    );
     return setCorsHeaders(response);
   } catch (error) {
     console.error('Error verifying wallet:', error);
-    const response = new Response(JSON.stringify({ error: 'Server error' }), { status: 500 });
-    return setCorsHeaders(response);
+    return errorResponse('Server error', 500);
   }
 }
