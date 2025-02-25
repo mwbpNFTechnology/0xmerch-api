@@ -7,7 +7,7 @@ if (!admin.apps.length) {
     credential: admin.credential.cert({
       projectId: process.env.FIREBASE_PROJECT_ID,
       clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
-      // If your key is stored as single line with escaped newlines, use replace.
+      // If your key is stored as a single line with escaped newlines, use replace.
       privateKey: process.env.FIREBASE_PRIVATE_KEY.replace(/\\n/g, '\n'),
     }),
   });
@@ -42,13 +42,12 @@ export async function OPTIONS() {
 // Handle POST requests for wallet verification and saving.
 export async function POST(request) {
   try {
-    // (Optional) You can still log the Authorization header if provided.
+    // Log the Authorization header if provided.
     const authHeader = request.headers.get('Authorization');
     console.log('Authorization header:', authHeader);
     
-    // Instead of extracting userId from the token, we accept it in the request body.
+    // Accept the userId from the request body.
     const { userId, address, nonce, signature, message, networkType } = await request.json();
-
     if (!userId) {
       return errorResponse('Missing userId in request body', 400);
     }
@@ -80,7 +79,7 @@ export async function POST(request) {
       walletVerifiedAt: admin.firestore.FieldValue.serverTimestamp(),
     });
 
-    // Verification successful: return JSON with verify: true and the walletName.
+    // Return success response with verify: true and walletName.
     const response = new Response(
       JSON.stringify({ verify: true, walletName }),
       { status: 200, headers: { 'Content-Type': 'application/json' } }
