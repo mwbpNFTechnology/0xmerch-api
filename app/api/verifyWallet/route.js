@@ -7,7 +7,7 @@ if (!admin.apps.length) {
     credential: admin.credential.cert({
       projectId: process.env.FIREBASE_PROJECT_ID,
       clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
-      // Replace escaped newline characters with actual newlines.
+      // If your key is stored as single line with escaped newlines, use replace.
       privateKey: process.env.FIREBASE_PRIVATE_KEY.replace(/\\n/g, '\n'),
     }),
   });
@@ -42,26 +42,16 @@ export async function OPTIONS() {
 // Handle POST requests for wallet verification and saving.
 export async function POST(request) {
   try {
-    // Retrieve the Firebase ID token from the Authorization header.
+    // (Optional) You can still log the Authorization header if provided.
     const authHeader = request.headers.get('Authorization');
     console.log('Authorization header:', authHeader);
-    if (!authHeader) {
-      return errorResponse('No Authorization header provided', 401);
-    }
-    // Expecting the header format: "Bearer <token>"
-    const token = authHeader.split('Bearer ')[1];
-    if (!token) {
-      return errorResponse('Invalid Authorization header', 401);
-    }
-
-    // Verify the token to obtain the user ID.
-    const decodedToken = await admin.auth().verifyIdToken(token);
-    const userId = decodedToken.uid;
-
     
+    // Instead of extracting userId from the token, we accept it in the request body.
+    const { userId, address, nonce, signature, message, networkType } = await request.json();
 
-    // Parse request body. Expecting address, nonce, signature, message, networkType.
-    const { address, nonce, signature, message, networkType } = await request.json();
+    if (!userId) {
+      return errorResponse('Missing userId in request body', 400);
+    }
 
     // Construct the expected message.
     const expectedMessage = `Welcome to 0xMerch!\n\nNonce: ${nonce}\n\nPlease sign this message to verify your wallet ownership.`;
