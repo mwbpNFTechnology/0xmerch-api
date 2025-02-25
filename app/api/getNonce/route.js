@@ -1,23 +1,25 @@
 import crypto from 'crypto';
 
-export async function GET(request) {
-  const nonce = crypto.randomBytes(16).toString('hex');
-  return new Response(JSON.stringify({ nonce }), {
-    headers: {
-      "Content-Type": "application/json",
-      "Access-Control-Allow-Origin": "*", // Allow all origins; for production, restrict this
-      "Access-Control-Allow-Methods": "GET, OPTIONS",
-    },
-  });
+// Helper function to set CORS headers on a Response object.
+function setCorsHeaders(response) {
+  response.headers.set('Access-Control-Allow-Origin', '*');
+  response.headers.set('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+  response.headers.set('Access-Control-Allow-Headers', 'Content-Type, Authorization, Pragma, Cache-Control');
+  response.headers.set('Access-Control-Allow-Credentials', 'true');
+  return response;
 }
 
-
+// Handles OPTIONS requests (preflight)
 export async function OPTIONS() {
-  return new Response(null, {
-    headers: {
-      "Access-Control-Allow-Origin": "*",
-      "Access-Control-Allow-Methods": "GET, OPTIONS",
-      "Access-Control-Allow-Headers": "Content-Type",
-    },
+  const response = new Response(null, { status: 204 });
+  return setCorsHeaders(response);
+}
+
+// Handles GET requests: returns a nonce with CORS headers added.
+export async function GET(request) {
+  const nonce = crypto.randomBytes(16).toString('hex');
+  const response = new Response(JSON.stringify({ nonce }), {
+    headers: { "Content-Type": "application/json" },
   });
+  return setCorsHeaders(response);
 }
