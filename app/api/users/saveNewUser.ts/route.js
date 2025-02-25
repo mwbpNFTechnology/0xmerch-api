@@ -34,14 +34,14 @@ export async function OPTIONS() {
 }
 
 /**
- * Handles POST requests to create a new user in the database.
+ * Handles POST requests to save a new user to the database.
  * This function:
  * 1. Uses getUserIdFromRequest() to extract and verify the Firebase ID token,
  *    obtaining the user's UID.
  * 2. Parses the request body for user data: email, username (optional), emailVerified, and provider (optional).
  * 3. Checks if a user document already exists for this UID.
- * 4. Checks that the email is not already used by another user.
- * 5. If a username is provided, checks that it's available in the `publicUsers` collection.
+ * 4. Queries the "users" collection to ensure the email is not already in use.
+ * 5. If a username is provided, checks if it is available in the `publicUsers` collection.
  * 6. Saves private user data to the "users" collection.
  * 7. Saves public user data to the "publicUsers" collection.
  * 8. Returns a JSON response indicating success.
@@ -54,7 +54,7 @@ export async function OPTIONS() {
  *   "provider": "google"            // optional
  * }
  *
- * The user ID is not sent in the body but is derived from the Firebase ID token.
+ * The user ID is derived from the Firebase ID token.
  *
  * @param {Request} request - The incoming HTTP request.
  * @returns {Promise<Response>} - A JSON response indicating success or error.
@@ -67,12 +67,15 @@ export async function POST(request) {
     
     // Parse the request body for user data.
     const data = await request.json();
-    const { email, username, emailVerified, provider } = data;
+    let { email, username, emailVerified, provider } = data;
     
     // Validate required fields.
     if (!email || typeof emailVerified !== 'boolean') {
       return errorResponse("Missing required fields", 400);
     }
+    
+    // Normalize email to lowercase for consistent comparison.
+    email = email.toLowerCase();
     
     // Check if a user document already exists for this userId.
     const existingUserDoc = await firestore.doc(`users/${userId}`).get();
@@ -84,12 +87,15 @@ export async function POST(request) {
     const emailQuerySnapshot = await firestore.collection('users')
       .where('email', '==', email)
       .get();
+    console.log(`Email query snapshot size for ${email}: `, emailQuerySnapshot.size);
     if (!emailQuerySnapshot.empty) {
-      return errorResponse("Email is already in use", 400);
+      return errorResponse("This email is already registered. Please sign in instead.", 400);
     }
     
-    // If a username is provided, check if it is available in the "publicUsers" collection.
+    // If a username is provided, check if it is available.
     if (username) {
+      // Normalize username if needed (e.g., trim whitespace).
+      username = username.trim();
       const publicUsersRef = firestore.collection("publicUsers");
       const usernameSnapshot = await publicUsersRef.where("username", "==", username).get();
       if (!usernameSnapshot.empty) {
