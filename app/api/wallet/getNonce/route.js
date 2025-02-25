@@ -2,25 +2,8 @@
 
 // Import Node.js crypto module to generate random values.
 import crypto from 'crypto';
-
-/**
- * Helper function to set Cross-Origin Resource Sharing (CORS) headers on a Response object.
- * These headers allow your API to be called from any origin and support the specified HTTP methods.
- *
- * @param {Response} response - The Response object to which CORS headers will be added.
- * @returns {Response} - The Response object with CORS headers set.
- */
-function setCorsHeaders(response) {
-  // Allow requests from any origin
-  response.headers.set('Access-Control-Allow-Origin', '*');
-  // Allow the following HTTP methods: GET, POST, and OPTIONS
-  response.headers.set('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-  // Allow these headers in requests
-  response.headers.set('Access-Control-Allow-Headers', 'Content-Type, Authorization, Pragma, Cache-Control');
-  // Allow credentials to be included in requests
-  response.headers.set('Access-Control-Allow-Credentials', 'true');
-  return response;
-}
+// Import the global CORS helper function from our shared utility file.
+import { setCorsHeaders } from '../../../lib/utils/cors';
 
 /**
  * Handles preflight OPTIONS requests.
@@ -51,6 +34,6 @@ export async function GET() {
     headers: { "Content-Type": "application/json" },
   });
   
-  // Return the response with CORS headers set.
+  // Return the response with CORS headers set using the global helper.
   return setCorsHeaders(response);
 }
