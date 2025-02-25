@@ -21,7 +21,6 @@ export async function OPTIONS() {
 export async function POST(request) {
   try {
     const userId = await getUserIdFromRequest(request);
-    console.log("User ID extracted from token:", userId);
     
     const data = await request.json();
     let { email, username, emailVerified, provider } = data;

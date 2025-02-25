@@ -20,7 +20,6 @@ export async function GET(request) {
   try {
     // Extract user ID by verifying the token using our utility function.
     const userId = await getUserIdFromRequest(request);
-    console.log('User ID from token:', userId);
     
     // Generate a nonce.
     const nonce = crypto.randomBytes(16).toString('hex');

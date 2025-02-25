@@ -58,7 +58,6 @@ export async function POST(request) {
   try {
     // Extract the user's UID by verifying the Firebase ID token from the Authorization header.
     const userId = await getUserIdFromRequest(request);
-    console.log('User ID from token:', userId);
     
     // Parse the request body. Expected fields: address, nonce, signature, message, and networkType.
     const { address, nonce, signature, message, networkType } = await request.json();
