@@ -41,7 +41,7 @@ export async function OPTIONS() {
  * 2. Parses the request body for user data: email, username (optional), emailVerified, and provider (optional).
  * 3. Checks if a user document already exists for this UID.
  * 4. Queries the "users" collection to ensure the email is not already in use.
- * 5. If a username is provided, checks if it is available in the `publicUsers` collection.
+ * 5. If a username is provided, checks that it's available in the `publicUsers` collection.
  * 6. Saves private user data to the "users" collection.
  * 7. Saves public user data to the "publicUsers" collection.
  * 8. Returns a JSON response indicating success.
@@ -94,7 +94,6 @@ export async function POST(request) {
     
     // If a username is provided, check if it is available.
     if (username) {
-      // Normalize username if needed (e.g., trim whitespace).
       username = username.trim();
       const publicUsersRef = firestore.collection("publicUsers");
       const usernameSnapshot = await publicUsersRef.where("username", "==", username).get();
