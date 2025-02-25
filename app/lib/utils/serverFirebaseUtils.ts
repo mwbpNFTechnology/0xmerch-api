@@ -11,14 +11,11 @@ if (!admin.apps.length) {
     credential: admin.credential.cert({
       projectId: process.env.FIREBASE_PROJECT_ID, // Your Firebase project ID.
       clientEmail: process.env.FIREBASE_CLIENT_EMAIL, // Your service account email.
-      // Use the private key from your environment variables.
-      // If the key is stored as a single-line string with escaped newline characters,
-      // this converts them to actual newlines.
+      // If the key is stored as a single-line string with escaped newlines, convert them to actual newlines.
       privateKey: process.env.FIREBASE_PRIVATE_KEY.replace(/\\n/g, '\n'),
     }),
   });
 }
-
 
 /**
  * Extracts the Firebase ID token from the request's Authorization header,
@@ -40,4 +37,13 @@ export async function getUserIdFromRequest(request: Request): Promise<string> {
   }
   const decodedToken = await admin.auth().verifyIdToken(token);
   return decodedToken.uid;
+}
+
+/**
+ * Returns the Firestore instance from the initialized Firebase Admin SDK.
+ *
+ * @returns {FirebaseFirestore.Firestore} - The Firestore instance.
+ */
+export function getFirestoreInstance() {
+  return admin.firestore();
 }

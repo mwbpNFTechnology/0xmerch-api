@@ -1,14 +1,12 @@
-// Import the verifyMessage function from ethers, which is used to recover the signing address,
-// and import Firebase Admin SDK (already initialized in your shared utilities).
+// Import the verifyMessage function from ethers to recover the signing address.
 import { verifyMessage } from 'ethers';
-import admin from 'firebase-admin';
-// Import the global CORS helper function from our shared utility file.
+// Import the global CORS helper function.
 import { setCorsHeaders } from '../../../lib/utils/cors';
-// Import our server-side Firebase utility to extract the user ID from the request.
-import { getUserIdFromRequest } from '../../../lib/utils/serverFirebaseUtils';
+// Import our server-side Firebase utilities, including token extraction and Firestore instance.
+import { getUserIdFromRequest, getFirestoreInstance } from '../../../lib/utils/serverFirebaseUtils';
 
-// Retrieve the Firestore instance from the Firebase Admin SDK.
-const firestore = admin.firestore();
+// Retrieve the Firestore instance from our shared utility.
+const firestore = getFirestoreInstance();
 
 /**
  * Helper function to create a standardized error response with JSON content.
@@ -42,7 +40,7 @@ export async function OPTIONS() {
 /**
  * Main POST handler for wallet verification and saving.
  * This function:
- * 1. Uses the shared getUserIdFromRequest() to extract and verify the Firebase ID token,
+ * 1. Uses getUserIdFromRequest() to extract and verify the Firebase ID token,
  *    obtaining the user's UID.
  * 2. Parses the request body for wallet-related fields: address, nonce, signature, message, and networkType.
  * 3. Constructs the expected message and compares it with the provided message.
@@ -60,7 +58,7 @@ export async function POST(request) {
     const userId = await getUserIdFromRequest(request);
     console.log('User ID from token:', userId);
     
-    // Parse the request body. Expected fields are: address, nonce, signature, message, and networkType.
+    // Parse the request body. Expected fields: address, nonce, signature, message, and networkType.
     const { address, nonce, signature, message, networkType } = await request.json();
     
     // Construct the expected message that should have been signed by the user.
