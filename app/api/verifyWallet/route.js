@@ -13,7 +13,6 @@ if (!admin.apps.length) {
   });
 }
 
-
 const firestore = admin.firestore();
 
 // Helper function to set CORS headers.
