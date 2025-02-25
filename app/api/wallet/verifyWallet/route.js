@@ -1,26 +1,11 @@
-// app/api/wallet/verifyWallet/route.js
-
 // Import the verifyMessage function from ethers, which is used to recover the signing address,
-// and import the Firebase Admin SDK for secure server-side operations.
+// and import Firebase Admin SDK (already initialized in your shared utilities).
 import { verifyMessage } from 'ethers';
 import admin from 'firebase-admin';
 // Import the global CORS helper function from our shared utility file.
 import { setCorsHeaders } from '../../../lib/utils/cors';
-
-// Initialize Firebase Admin SDK if it hasn't been initialized yet.
-// This initialization uses credentials from environment variables.
-if (!admin.apps.length) {
-  admin.initializeApp({
-    credential: admin.credential.cert({
-      projectId: process.env.FIREBASE_PROJECT_ID, // Your Firebase project ID.
-      clientEmail: process.env.FIREBASE_CLIENT_EMAIL, // Your service account email.
-      // Use the private key from your environment variables.
-      // If the key is stored as a single-line string with escaped newline characters,
-      // this converts them to actual newlines.
-      privateKey: process.env.FIREBASE_PRIVATE_KEY.replace(/\\n/g, '\n'),
-    }),
-  });
-}
+// Import our server-side Firebase utility to extract the user ID from the request.
+import { getUserIdFromRequest } from '../../../lib/utils/serverFirebaseUtils';
 
 // Retrieve the Firestore instance from the Firebase Admin SDK.
 const firestore = admin.firestore();
@@ -57,7 +42,8 @@ export async function OPTIONS() {
 /**
  * Main POST handler for wallet verification and saving.
  * This function:
- * 1. Retrieves and verifies the Firebase ID token from the Authorization header.
+ * 1. Uses the shared getUserIdFromRequest() to extract and verify the Firebase ID token,
+ *    obtaining the user's UID.
  * 2. Parses the request body for wallet-related fields: address, nonce, signature, message, and networkType.
  * 3. Constructs the expected message and compares it with the provided message.
  * 4. Uses ethers' verifyMessage to recover the address from the signature and compares it to the provided address.
@@ -70,29 +56,9 @@ export async function OPTIONS() {
  */
 export async function POST(request) {
   try {
-    // Retrieve the Authorization header from the request.
-    // This header should contain the Firebase ID token.
-    const authHeader = request.headers.get('Authorization');
-    console.log('Authorization header:', authHeader);
-    if (!authHeader) {
-      return errorResponse('No Authorization header provided', 401);
-    }
-    // Expect the header to be in the format "Bearer <token>".
-    const token = authHeader.split('Bearer ')[1];
-    if (!token) {
-      return errorResponse('Invalid Authorization header', 401);
-    }
-    
-    // Verify the token using Firebase Admin to obtain the user's UID.
-    let decodedToken;
-    try {
-      decodedToken = await admin.auth().verifyIdToken(token);
-      console.log('Decoded token:', decodedToken);
-    } catch (tokenError) {
-      console.error('Token verification error:', tokenError);
-      return errorResponse('Invalid token', 401);
-    }
-    const userId = decodedToken.uid;
+    // Extract the user's UID by verifying the Firebase ID token from the Authorization header.
+    const userId = await getUserIdFromRequest(request);
+    console.log('User ID from token:', userId);
     
     // Parse the request body. Expected fields are: address, nonce, signature, message, and networkType.
     const { address, nonce, signature, message, networkType } = await request.json();
