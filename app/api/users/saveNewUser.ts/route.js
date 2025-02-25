@@ -34,14 +34,14 @@ export async function OPTIONS() {
 }
 
 /**
- * Handles POST requests to save a new user to the database.
+ * Handles POST requests to create a new user in the database.
  * This function:
  * 1. Uses getUserIdFromRequest() to extract and verify the Firebase ID token,
  *    obtaining the user's UID.
  * 2. Parses the request body for user data: email, username (optional), emailVerified, and provider (optional).
- * 3. Checks if a user document already exists for the UID.
- * 4. Queries the "users" collection to ensure the email is not already in use.
- * 5. If a username is provided, checks if it is available in the `publicUsers` collection.
+ * 3. Checks if a user document already exists for this UID.
+ * 4. Checks that the email is not already used by another user.
+ * 5. If a username is provided, checks that it's available in the `publicUsers` collection.
  * 6. Saves private user data to the "users" collection.
  * 7. Saves public user data to the "publicUsers" collection.
  * 8. Returns a JSON response indicating success.
@@ -53,6 +53,8 @@ export async function OPTIONS() {
  *   "emailVerified": true,
  *   "provider": "google"            // optional
  * }
+ *
+ * The user ID is not sent in the body but is derived from the Firebase ID token.
  *
  * @param {Request} request - The incoming HTTP request.
  * @returns {Promise<Response>} - A JSON response indicating success or error.
@@ -86,7 +88,7 @@ export async function POST(request) {
       return errorResponse("Email is already in use", 400);
     }
     
-    // If a username is provided, check if it is available.
+    // If a username is provided, check if it is available in the "publicUsers" collection.
     if (username) {
       const publicUsersRef = firestore.collection("publicUsers");
       const usernameSnapshot = await publicUsersRef.where("username", "==", username).get();
