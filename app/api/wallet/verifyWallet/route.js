@@ -5,7 +5,7 @@
 import { verifyMessage } from 'ethers';
 import admin from 'firebase-admin';
 // Import the global CORS helper function from our shared utility file.
-import { setCorsHeaders } from '@/lib/utils/cors';
+import { setCorsHeaders } from '../../../../lib/utils/cors';
 
 // Initialize Firebase Admin SDK if it hasn't been initialized yet.
 // This initialization uses credentials from environment variables.
