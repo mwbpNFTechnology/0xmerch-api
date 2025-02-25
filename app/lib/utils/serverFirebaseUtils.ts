@@ -1,20 +1,24 @@
 // app/lib/utils/serverFirebaseUtils.ts
 import admin from 'firebase-admin';
 
-if (!process.env.FIREBASE_PRIVATE_KEY) {
-  throw new Error('FIREBASE_PRIVATE_KEY is not defined');
-}
-
-// Only initialize the Firebase Admin SDK if it hasn't been initialized yet.
+// Initialize Firebase Admin SDK if it hasn't been initialized yet.
 if (!admin.apps.length) {
+  if (!process.env.FIREBASE_PRIVATE_KEY) {
+    throw new Error('FIREBASE_PRIVATE_KEY is not defined');
+  }
+  
   admin.initializeApp({
     credential: admin.credential.cert({
-      projectId: process.env.FIREBASE_PROJECT_ID,
-      clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
+      projectId: process.env.FIREBASE_PROJECT_ID, // Your Firebase project ID.
+      clientEmail: process.env.FIREBASE_CLIENT_EMAIL, // Your service account email.
+      // Use the private key from your environment variables.
+      // If the key is stored as a single-line string with escaped newline characters,
+      // this converts them to actual newlines.
       privateKey: process.env.FIREBASE_PRIVATE_KEY.replace(/\\n/g, '\n'),
     }),
   });
 }
+
 
 /**
  * Extracts the Firebase ID token from the request's Authorization header,
