@@ -42,15 +42,31 @@ export async function OPTIONS() {
 // Handle POST requests for wallet verification and saving.
 export async function POST(request) {
   try {
-    // Log the Authorization header if provided.
+    // Retrieve the Firebase ID token from the Authorization header.
     const authHeader = request.headers.get('Authorization');
     console.log('Authorization header:', authHeader);
-    
-    // Accept the userId from the request body.
-    const { userId, address, nonce, signature, message, networkType } = await request.json();
-    if (!userId) {
-      return errorResponse('Missing userId in request body', 400);
+    if (!authHeader) {
+      return errorResponse('No Authorization header provided', 401);
     }
+    // Expecting the header format: "Bearer <token>"
+    const token = authHeader.split('Bearer ')[1];
+    if (!token) {
+      return errorResponse('Invalid Authorization header', 401);
+    }
+    
+    // Verify the token to obtain the user ID.
+    let decodedToken;
+    try {
+      decodedToken = await admin.auth().verifyIdToken(token);
+      console.log('Decoded token:', decodedToken);
+    } catch (tokenError) {
+      console.error('Token verification error:', tokenError);
+      return errorResponse('Invalid token', 401);
+    }
+    const userId = decodedToken.uid;
+
+    // Parse request body. Expecting address, nonce, signature, message, networkType.
+    const { address, nonce, signature, message, networkType } = await request.json();
 
     // Construct the expected message.
     const expectedMessage = `Welcome to 0xMerch!\n\nNonce: ${nonce}\n\nPlease sign this message to verify your wallet ownership.`;
@@ -79,7 +95,7 @@ export async function POST(request) {
       walletVerifiedAt: admin.firestore.FieldValue.serverTimestamp(),
     });
 
-    // Return success response with verify: true and walletName.
+    // Verification successful: return JSON with verify: true and the walletName.
     const response = new Response(
       JSON.stringify({ verify: true, walletName }),
       { status: 200, headers: { 'Content-Type': 'application/json' } }
