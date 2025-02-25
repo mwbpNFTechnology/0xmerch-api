@@ -1,4 +1,19 @@
 import { verifyMessage } from 'ethers';
+import admin from 'firebase-admin';
+
+// Initialize Firebase Admin SDK if not already initialized.
+if (!admin.apps.length) {
+  admin.initializeApp({
+    credential: admin.credential.cert({
+      projectId: process.env.FIREBASE_PROJECT_ID,
+      clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
+      // Replace escaped newline characters with actual newlines.
+      privateKey: process.env.FIREBASE_PRIVATE_KEY.replace(/\\n/g, '\n'),
+    }),
+  });
+}
+
+const firestore = admin.firestore();
 
 // Helper function to set CORS headers.
 function setCorsHeaders(response) {
@@ -24,29 +39,57 @@ export async function OPTIONS() {
   return setCorsHeaders(response);
 }
 
-// Handle POST requests for wallet verification.
+// Handle POST requests for wallet verification and saving.
 export async function POST(request) {
   try {
-    const { address, nonce, signature, message } = await request.json();
+    // Retrieve the Firebase ID token from the Authorization header.
+    const authHeader = request.headers.get('Authorization');
+    if (!authHeader) {
+      return errorResponse('No Authorization header provided', 401);
+    }
+    // Expecting the header format: "Bearer <token>"
+    const token = authHeader.split('Bearer ')[1];
+    if (!token) {
+      return errorResponse('Invalid Authorization header', 401);
+    }
+
+    // Verify the token to obtain the user ID.
+    const decodedToken = await admin.auth().verifyIdToken(token);
+    const userId = decodedToken.uid;
+
+    // Parse request body. Expecting address, nonce, signature, message, networkType.
+    const { address, nonce, signature, message, networkType } = await request.json();
 
     // Construct the expected message.
     const expectedMessage = `Welcome to 0xMerch!\n\nNonce: ${nonce}\n\nPlease sign this message to verify your wallet ownership.`;
-
     if (message !== expectedMessage) {
       return errorResponse('Message does not match', 400);
     }
 
     // Verify the signature.
     const recoveredAddress = verifyMessage(message, signature);
-
     if (recoveredAddress.toLowerCase() !== address.toLowerCase()) {
       return errorResponse('Signature verification failed', 400);
     }
 
-    
-    // Verification successful
+    // Determine the wallet name based on how many wallets the user already has.
+    const walletsRef = firestore.collection(`users/${userId}/wallets`);
+    const walletsSnapshot = await walletsRef.get();
+    const walletCount = walletsSnapshot.size;
+    const walletName = `wallet${walletCount + 1}`;
+
+    // Save the verified wallet in Firestore.
+    const walletRef = firestore.doc(`users/${userId}/wallets/${address}`);
+    await walletRef.set({
+      walletAddress: address,
+      networkType,
+      walletName,
+      walletVerifiedAt: admin.firestore.FieldValue.serverTimestamp(),
+    });
+
+    // Verification successful: return JSON with verify: true and the walletName.
     const response = new Response(
-      JSON.stringify({ verify: true }),
+      JSON.stringify({ verify: true, walletName }),
       { status: 200, headers: { 'Content-Type': 'application/json' } }
     );
     return setCorsHeaders(response);
