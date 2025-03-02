@@ -1,4 +1,4 @@
-// app/api/wallet/checkWalletAssignedAll/route.js
+// app/api/wallet/checkWalletAssignedPublic/route.js
 
 // Import our global CORS helper.
 import { setCorsHeaders } from '../../../lib/utils/cors';
@@ -19,16 +19,17 @@ export async function OPTIONS() {
 }
 
 /**
- * GET endpoint to check if a wallet address is assigned for any user.
- * The API is protected by Firebase authentication; only authenticated users can call it.
- * Expects a query parameter `walletAddress`.
+ * GET endpoint to check if a wallet address is present in the `wallets` array field
+ * of any document in the publicUsers collection.
+ * The API is protected by Firebase authentication.
  *
  * Process:
  * 1. Verifies the Firebase ID token to ensure the caller is authenticated.
  * 2. Reads the walletAddress from the URL's query parameters.
- * 3. Uses a collection group query to search for a document in all users' "wallets" subcollections
- *    where the `walletAddress` field equals the provided value.
- * 4. Returns a JSON response with { assigned: true } if found, otherwise { assigned: false }.
+ * 3. Fetches all documents in the `publicUsers` collection.
+ * 4. Iterates over each document and checks if the `wallets` array field contains
+ *    an object with a matching `walletAddress`.
+ * 5. Returns a JSON response with { assigned: true } if found, otherwise { assigned: false }.
  *
  * @param {Request} request - The incoming HTTP request.
  * @returns {Promise<Response>} - A JSON response indicating whether the wallet address is assigned.
@@ -50,23 +51,27 @@ export async function GET(request) {
       return setCorsHeaders(missingResponse);
     }
 
-    // Use a collection group query to search for the wallet address in all users' wallets subcollections.
-    const walletsQuery = firestore
-      .collectionGroup('wallets')
-      .where('walletAddress', '==', walletAddress);
-    const querySnapshot = await walletsQuery.get();
+    // Fetch all publicUsers documents.
+    const publicUsersSnapshot = await firestore.collection('publicUsers').get();
+    let assigned = false;
+    publicUsersSnapshot.forEach((doc) => {
+      const data = doc.data();
+      if (Array.isArray(data.wallets)) {
+        // Check if any wallet in the array has a walletAddress that matches the query.
+        if (data.wallets.some((wallet) => wallet.walletAddress === walletAddress)) {
+          assigned = true;
+        }
+      }
+    });
 
-    const responseBody = querySnapshot.empty
-      ? { assigned: false }
-      : { assigned: true };
-
+    const responseBody = { assigned };
     const response = new Response(JSON.stringify(responseBody), {
       status: 200,
       headers: { 'Content-Type': 'application/json' },
     });
     return setCorsHeaders(response);
   } catch (error) {
-    console.error('Error checking wallet assignment across all users:', error);
+    console.error('Error checking wallet assignment in publicUsers:', error);
     const errorResponse = new Response(
       JSON.stringify({ error: 'Server error' }),
       { status: 500, headers: { 'Content-Type': 'application/json' } }
