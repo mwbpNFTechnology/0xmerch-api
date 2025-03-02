@@ -1,6 +1,7 @@
 // app/api/contractMetadata/route.js
 
 // Import the global CORS helper.
+import { Console } from 'console';
 import { setCorsHeaders } from '../../../lib/utils/cors';
 
 /**
@@ -41,6 +42,8 @@ export async function GET(request) {
       );
       return setCorsHeaders(keyErrorResponse);
     }
+
+    
 
 
     // Build the Alchemy API URL for getNFTsForCollection with metadata enabled.
