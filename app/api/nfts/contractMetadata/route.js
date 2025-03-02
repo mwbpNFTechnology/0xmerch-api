@@ -1,8 +1,17 @@
 // app/api/contractMetadata/route.js
 
 // Import the global CORS helper.
-import { Console } from 'console';
 import { setCorsHeaders } from '../../../lib/utils/cors';
+
+/**
+ * Handles preflight OPTIONS requests.
+ *
+ * @returns {Promise<Response>} - A response with status 204 and CORS headers.
+ */
+export async function OPTIONS() {
+  const response = new Response(null, { status: 204 });
+  return setCorsHeaders(response);
+}
 
 /**
  * GET endpoint to fetch NFT collection data from Alchemy and return selected contract metadata.
@@ -43,11 +52,8 @@ export async function GET(request) {
       return setCorsHeaders(keyErrorResponse);
     }
 
-    
-
-
     // Build the Alchemy API URL for getNFTsForCollection with metadata enabled.
-    const alchemyUrl = `https://eth-sepolia.g.alchemy.com/nft/v3/${alchemyApiKey}/getNFTsForCollection?contractAddress=${contractAddress}&withMetadata=true`;
+    const alchemyUrl = `https://eth-sepolia.g.alchemy.com/nft/v3/${alchemyApiKey}/getNFTsForCollection?contractAddress=${encodeURIComponent(contractAddress)}&withMetadata=true`;
 
     // Call the Alchemy endpoint.
     const alchemyResponse = await fetch(alchemyUrl);
