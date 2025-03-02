@@ -4,7 +4,7 @@
 import { setCorsHeaders } from '../../../lib/utils/cors';
 // Import our server-side Firebase utilities.
 import { getUserIdFromRequest, getFirestoreInstance } from '../../../lib/utils/serverFirebaseUtils';
-// Import the Firebase Admin SDK (assumes getFirestoreInstance returns an admin.firestore() instance).
+// Import the Firebase Admin SDK.
 import admin from 'firebase-admin';
 
 // Retrieve the Firestore instance.
@@ -45,7 +45,7 @@ export async function OPTIONS() {
  * 1. Extracts the user's UID by verifying the Firebase ID token from the request.
  * 2. Parses the request body to retrieve the walletAddress and newName.
  * 3. Validates the required parameters.
- * 4. Updates the wallet document in Firestore with the new wallet name.
+ * 4. Updates the wallet document in Firestore with the new wallet name and sets an updated timestamp.
  * 5. Returns a successful JSON response if the update completes.
  *
  * @param {Request} request - The incoming HTTP request.
@@ -67,9 +67,10 @@ export async function POST(request) {
     // Reference the wallet document using the Admin SDK.
     const walletRef = firestore.doc(`users/${userId}/wallets/${walletAddress}`);
     
-    // Update the wallet document with the new name.
+    // Update the wallet document with the new name and an updated timestamp.
     await walletRef.update({
-      walletName: newName.trim()
+      walletName: newName.trim(),
+      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
     });
     
     console.log(`Wallet name updated successfully for ${walletAddress}`);
