@@ -2,10 +2,8 @@
 
 // Import our global CORS helper.
 import { setCorsHeaders } from '../../../lib/utils/cors';
-// Import our server-side Firebase utilities (for user token extraction and Firestore instance).
+// Import our server-side Firebase utilities for user token extraction and Firestore instance.
 import { getUserIdFromRequest, getFirestoreInstance } from '../../../lib/utils/serverFirebaseUtils';
-// Import the Firebase Admin SDK.
-import admin from 'firebase-admin';
 
 // Retrieve the Firestore instance.
 const firestore = getFirestoreInstance();
