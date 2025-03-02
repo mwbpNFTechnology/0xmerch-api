@@ -4,11 +4,9 @@
 import { setCorsHeaders } from '../../../lib/utils/cors';
 // Import our server-side Firebase utilities.
 import { getUserIdFromRequest, getFirestoreInstance } from '../../../lib/utils/serverFirebaseUtils';
-// Import Firestore functions.
-import { collection, getDocs } from 'firebase/firestore';
 
-// Retrieve the Firestore instance.
-const firestore = getFirestoreInstance();
+// Retrieve the Firestore instance (Admin SDK instance).
+const firestore = getFirestoreInstance(); // This is an admin.firestore() instance
 
 /**
  * Handles preflight OPTIONS requests.
@@ -35,9 +33,9 @@ export async function GET(request) {
     // Extract the user's UID from the Firebase ID token.
     const userId = await getUserIdFromRequest(request);
 
-    // Reference the wallets subcollection.
-    const walletsRef = collection(firestore, `users/${userId}/wallets`);
-    const walletsSnapshot = await getDocs(walletsRef);
+    // Reference the wallets subcollection using Admin SDK methods.
+    const walletsRef = firestore.collection(`users/${userId}/wallets`);
+    const walletsSnapshot = await walletsRef.get();
 
     // Map over the documents to return wallet data.
     const wallets = walletsSnapshot.docs.map(doc => ({
