@@ -6,6 +6,8 @@ import { verifyMessage } from 'ethers';
 import { setCorsHeaders } from '../../../lib/utils/cors';
 // Import our server-side Firebase utilities, including token extraction and Firestore instance.
 import { getUserIdFromRequest, getFirestoreInstance } from '../../../lib/utils/serverFirebaseUtils';
+// Import the Firebase Admin SDK.
+import admin from 'firebase-admin';
 
 // Retrieve the Firestore instance from our shared utility.
 const firestore = getFirestoreInstance();
