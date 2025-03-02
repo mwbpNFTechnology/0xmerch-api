@@ -92,14 +92,14 @@ export async function POST(request) {
     });
     
     // Update the publicUsers document by appending the wallet info to the wallets array field.
+    // Use a client-generated timestamp since FieldValue.serverTimestamp() is not allowed inside an array.
     const publicUserRef = firestore.doc(`publicUsers/${userId}`);
     await publicUserRef.update({
       wallets: admin.firestore.FieldValue.arrayUnion({
         walletAddress: address,
         networkType,
         walletName,
-        // Use serverTimestamp here as well; note that it may result in slightly different values.
-        walletVerifiedAt: admin.firestore.FieldValue.serverTimestamp(),
+        walletVerifiedAt: new Date().toISOString(),
       })
     });
     

@@ -1,4 +1,4 @@
-// app/api/wallet/checkWalletAssignedPublic/route.js
+// app/api/wallet/checkWalletAssigned/route.js
 
 // Import our global CORS helper.
 import { setCorsHeaders } from '../../../lib/utils/cors';
