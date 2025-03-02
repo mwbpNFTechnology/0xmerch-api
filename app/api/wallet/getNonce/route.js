@@ -18,7 +18,7 @@ export async function OPTIONS() {
  */
 export async function GET(request) {
   try {
-    // Extract user ID by verifying the token using our utility function.
+    // verifying the token using our utility function.
     await getUserIdFromRequest(request);
     
     // Generate a nonce.
