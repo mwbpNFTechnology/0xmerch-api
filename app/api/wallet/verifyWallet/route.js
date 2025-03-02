@@ -31,10 +31,8 @@ function errorResponse(message, statusCode) {
 
 /**
  * Handles preflight OPTIONS requests.
- * Browsers send these requests as part of CORS to verify that the actual request is allowed.
- * This function returns a 204 No Content response with the appropriate CORS headers.
  *
- * @returns {Promise<Response>} - A response with status 204.
+ * @returns {Promise<Response>} - A response with status 204 and CORS headers.
  */
 export async function OPTIONS() {
   const response = new Response(null, { status: 204 });
@@ -51,7 +49,8 @@ export async function OPTIONS() {
  * 4. Uses ethers' verifyMessage to recover the address from the signature and compares it to the provided address.
  * 5. Determines a new wallet name based on the user's existing wallets in Firestore.
  * 6. Saves the verified wallet data to Firestore under the user's wallets subcollection.
- * 7. Returns a successful JSON response with { verify: true, walletName }.
+ * 7. Updates the corresponding publicUsers document by appending the wallet info to a wallets array.
+ * 8. Returns a successful JSON response with { verify: true, walletName }.
  *
  * @param {Request} request - The incoming HTTP request.
  * @returns {Promise<Response>} - A response with the result of the verification.
@@ -90,6 +89,18 @@ export async function POST(request) {
       networkType,
       walletName,
       walletVerifiedAt: admin.firestore.FieldValue.serverTimestamp(),
+    });
+    
+    // Update the publicUsers document by appending the wallet info to the wallets array field.
+    const publicUserRef = firestore.doc(`publicUsers/${userId}`);
+    await publicUserRef.update({
+      wallets: admin.firestore.FieldValue.arrayUnion({
+        walletAddress: address,
+        networkType,
+        walletName,
+        // Use serverTimestamp here as well; note that it may result in slightly different values.
+        walletVerifiedAt: admin.firestore.FieldValue.serverTimestamp(),
+      })
     });
     
     // Return a successful JSON response with verify: true and the wallet name.
