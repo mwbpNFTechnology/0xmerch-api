@@ -3,7 +3,7 @@
 import { Contract } from 'ethers';
 import { setCorsHeaders } from '../../../lib/utils/cors';
 import { getProviderFromInteractWithContract } from '../../../lib/utils/blockchainNetworkUtilis';
-import { getMerchSmertContractInfo, SupportedNetwork } from '../../../config/contractConfig';
+import { getMerchSmertContract, MERCH_ABI, SupportedNetwork } from '../../../config/contractConfig';
 
 /**
  * Handles preflight OPTIONS requests.
@@ -71,10 +71,10 @@ export async function GET(request) {
     const provider = getProviderFromInteractWithContract(request);
 
     // Get the contract address and ABI for merchSmert contract.
-    const { contractAddress, abi } = getMerchSmertContractInfo(normalizedNetwork);
+    const { contractAddress } = getMerchSmertContract(normalizedNetwork);
 
     // Instantiate the contract.
-    const contract = new Contract(contractAddress, abi, provider);
+    const contract = new Contract(contractAddress, MERCH_ABI, provider);
 
     // Call the read function: getContractInfosByOwner(ownerAddress)
     const rawInfos = await contract.getContractInfosByOwner(ownerAddress);

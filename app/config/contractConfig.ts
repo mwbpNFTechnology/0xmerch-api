@@ -12,14 +12,14 @@
  * Mapping of supported networks to the corresponding 0xMerchSmert contract addresses.
  */
 export const MerchSmertContractAddresses: Record<SupportedNetwork, string> = {
-  [SupportedNetwork.Ethereum]: "0xda45Eaf463D5544Ca3921125eB9fa0633508E1A2",
-  [SupportedNetwork.Sepolia]: "0x5E70a8F9Bf45Fe1CcDb0D524D7c75c8C27C354C1",
+  [SupportedNetwork.Ethereum]: "",
+  [SupportedNetwork.Sepolia]: "0x954887Fe59495a6990d627bd3F554a55B1bA7EF9",
 };
 
 /**
  * The ABI for the 0xMerchSmert contract.
  */
-export const MerchSmertContractAbi = [
+export const MERCH_ABI = [
   {
     "inputs": [
       {
@@ -254,11 +254,10 @@ export const MerchSmertContractAbi = [
  * Returns the 0xMerchSmert contract information based on the provided network.
  *
  * @param network The supported network (ethereum or sepolia).
- * @returns An object containing the contract address and its ABI.
+ * @returns An contractAddress base on the network.
  */
-export function getMerchSmertContractInfo(network: SupportedNetwork): { contractAddress: string; abi: any[] } {
+export function getMerchSmertContract(network: SupportedNetwork): { contractAddress: string } {
   return {
     contractAddress: MerchSmertContractAddresses[network],
-    abi: MerchSmertContractAbi
   };
 }
