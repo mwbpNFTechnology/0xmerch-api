@@ -83,7 +83,7 @@ export async function GET(request) {
     const contractInfos = rawInfos.map(info => ({
       contractName: info[0],
       contractAddress: info[1],
-      ownerAddress: info[2],
+      contractOwner: info[2],
       // Convert royalties to string (or to number if it's safe and desired)
       royalties: info[3] !== undefined ? Number(info[3]) : null,
       uuid0xMERCH: info[4],

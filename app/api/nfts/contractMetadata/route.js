@@ -104,6 +104,7 @@ export async function GET(request) {
     // Build the result object.
     const result = {
       contractName,
+      contractAddress,
       contractDeployer,
       contractOwner: ownerAddress,
       imageUrl

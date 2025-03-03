@@ -2,13 +2,13 @@
 
 // Import the global CORS helper.
 import { setCorsHeaders } from '../../../lib/utils/cors';
-// Import our server-side Firebase utilities for token extraction and Firestore instance.
-import { getUserIdFromRequest } from '../../../lib/utils/serverFirebaseUtils';
+// Import our server-side Firebase utilities for token extraction.
+import { getUserAuthToken } from '../../../lib/utils/serverFirebaseUtils';
 // Import the Firebase Admin SDK.
 import admin from 'firebase-admin';
 
 // Retrieve the Firestore instance.
-// const firestore = getFirestoreInstance();
+const firestore = admin.firestore();
 
 /**
  * Helper function to create a standardized error response with JSON content.
@@ -45,13 +45,7 @@ export async function OPTIONS() {
  *   - imageURL (string)
  *   - network (string)
  *
- * The function saves the provided data in three locations:
- *   1. Under the user's assignCollections subcollection:
- *      users/{userId}/assignCollections/{nftContractAddress}
- *   2. In the nftCollections collection:
- *      nftCollections/{nftContractAddress} (with an additional userID field)
- *   3. Updates the publicUsers document:
- *      publicUsers/{userId} by appending the collection data to the nftCollections array.
+ * The function saves the provided data in the global nftCollections collection.
  *
  * @param {Request} request - The incoming HTTP request.
  * @returns {Promise<Response>} - A JSON response indicating success or an error message.
@@ -59,7 +53,7 @@ export async function OPTIONS() {
 export async function POST(request) {
   try {
     // Verify and extract the user's UID.
-    const userId = await getUserIdFromRequest(request);
+    const userId = await getUserAuthToken(request);
 
     // Parse the request body.
     const { ownerAddress, nftContractAddress, royalties, imageURL, network } = await request.json();
@@ -69,18 +63,8 @@ export async function POST(request) {
       return errorResponse("Missing required parameters", 400);
     }
 
-    // 1. Save under the user's assignCollections subcollection.
-    // const assignCollectionsRef = firestore.doc(`users/${userId}/assignCollections/${nftContractAddress}`);
-    // await assignCollectionsRef.set({
-    //   ownerAddress,
-    //   nftContractAddress,
-    //   network,
-    //   royalties,
-    //   imageURL,
-    // });
-
-    // 2. Save in the global nftCollections collection (include the userID).
-    const nftCollectionsRef = admin.firestore.doc(`nftCollections/${nftContractAddress}`);
+    // 1. Save in the global nftCollections collection (include the userID).
+    const nftCollectionsRef = firestore.doc(`nftCollections/${nftContractAddress}`);
     await nftCollectionsRef.set({
       ownerAddress,
       nftContractAddress,
@@ -90,17 +74,7 @@ export async function POST(request) {
       imageURL,
     });
 
-    // 3. Update the publicUsers document by appending this collection info to the nftCollections array field.
-    // const publicUserRef = firestore.doc(`publicUsers/${userId}`);
-    // await publicUserRef.update({
-    //   nftCollections: admin.firestore.FieldValue.arrayUnion({
-    //     ownerAddress,
-    //     nftContractAddress,
-    //     network,
-    //     royalties,
-    //     imageURL,
-    //   })
-    // });
+    // (Optional) You can also save to user's assignCollections or update publicUsers as needed.
 
     // Return a successful JSON response.
     const response = new Response(
