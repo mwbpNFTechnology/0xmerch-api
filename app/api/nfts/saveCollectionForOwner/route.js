@@ -70,14 +70,14 @@ export async function POST(request) {
     }
 
     // 1. Save under the user's assignCollections subcollection.
-    const assignCollectionsRef = firestore.doc(`users/${userId}/assignCollections/${nftContractAddress}`);
-    await assignCollectionsRef.set({
-      ownerAddress,
-      nftContractAddress,
-      network,
-      royalties,
-      imageURL,
-    });
+    // const assignCollectionsRef = firestore.doc(`users/${userId}/assignCollections/${nftContractAddress}`);
+    // await assignCollectionsRef.set({
+    //   ownerAddress,
+    //   nftContractAddress,
+    //   network,
+    //   royalties,
+    //   imageURL,
+    // });
 
     // 2. Save in the global nftCollections collection (include the userID).
     const nftCollectionsRef = firestore.doc(`nftCollections/${nftContractAddress}`);
@@ -91,16 +91,16 @@ export async function POST(request) {
     });
 
     // 3. Update the publicUsers document by appending this collection info to the nftCollections array field.
-    const publicUserRef = firestore.doc(`publicUsers/${userId}`);
-    await publicUserRef.update({
-      nftCollections: admin.firestore.FieldValue.arrayUnion({
-        ownerAddress,
-        nftContractAddress,
-        network,
-        royalties,
-        imageURL,
-      })
-    });
+    // const publicUserRef = firestore.doc(`publicUsers/${userId}`);
+    // await publicUserRef.update({
+    //   nftCollections: admin.firestore.FieldValue.arrayUnion({
+    //     ownerAddress,
+    //     nftContractAddress,
+    //     network,
+    //     royalties,
+    //     imageURL,
+    //   })
+    // });
 
     // Return a successful JSON response.
     const response = new Response(
