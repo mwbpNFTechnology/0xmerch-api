@@ -8,7 +8,7 @@ import { getUserIdFromRequest, getFirestoreInstance } from '../../../lib/utils/s
 import admin from 'firebase-admin';
 
 // Retrieve the Firestore instance.
-const firestore = getFirestoreInstance();
+// const firestore = getFirestoreInstance();
 
 /**
  * Helper function to create a standardized error response with JSON content.
@@ -80,7 +80,7 @@ export async function POST(request) {
     // });
 
     // 2. Save in the global nftCollections collection (include the userID).
-    const nftCollectionsRef = firestore.doc(`nftCollections/${nftContractAddress}`);
+    const nftCollectionsRef = admin.firestore.doc(`nftCollections/${nftContractAddress}`);
     await nftCollectionsRef.set({
       ownerAddress,
       nftContractAddress,
