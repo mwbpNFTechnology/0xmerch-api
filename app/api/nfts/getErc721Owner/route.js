@@ -1,6 +1,6 @@
 // app/api/nfts/getErc721Owner/route.js
 
-import { JsonRpcProvider, Contract } from 'ethers';
+import { Contract } from 'ethers';
 import { setCorsHeaders } from '../../../lib/utils/cors';
 import { getProviderFromInteractWithContract } from '../../../lib/utils/blockchainNetworkUtilis';
 // (Optional) Uncomment if authentication is required.
