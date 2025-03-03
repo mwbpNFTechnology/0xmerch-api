@@ -1,4 +1,4 @@
-// app/api/markAsCreator/route.js
+// app/api/nfts/saveCollectionForOwner/route.js
 
 // Import the global CORS helper.
 import { setCorsHeaders } from '../../../lib/utils/cors';

@@ -1,7 +1,11 @@
-// app/api/contractMetadata/route.js
+// app/api/nfts/contractMetadata/route.js
 
 // Import the global CORS helper.
 import { setCorsHeaders } from '../../../lib/utils/cors';
+// Import the NFT endpoint URL utility and provider utility.
+import { getProviderUrlNFTEndpoint, getProviderFromInteractWithContract } from '../../../lib/utils/blockchainNetworkUtilis';
+// Import ethers (import everything so that ethers.Contract is available).
+import * as ethers from 'ethers';
 
 /**
  * Handles preflight OPTIONS requests.
@@ -14,16 +18,20 @@ export async function OPTIONS() {
 }
 
 /**
- * GET endpoint to fetch NFT collection data from Alchemy and return selected contract metadata.
- * Expects a query parameter `contractAddress`.
+ * GET endpoint to fetch NFT collection metadata from Alchemy and retrieve the ERC721 contract owner.
+ * Expects query parameters:
+ *   - contractAddress: the contract address to query.
+ *   - network: the network to use ("ethereum" or "sepolia").
  *
  * Process:
  * 1. Reads the contractAddress from the URL's query parameters.
- * 2. Retrieves the Alchemy API key from environment variables.
- * 3. Calls the Alchemy getNFTsForCollection endpoint with metadata enabled.
+ * 2. Uses the getProviderUrlNFTEndpoint utility to build the base NFT API endpoint URL.
+ * 3. Constructs the full Alchemy API URL for getNFTsForCollection with metadata enabled.
  * 4. Extracts the contract name, contract deployer, and image URL from the first NFT in the collection.
  *    If contract.openSeaMetadata.imageUrl is null, it falls back to nft.image.cachedUrl.
- * 5. Returns the data as JSON.
+ * 5. Uses getProviderFromInteractWithContract to obtain a provider for contract interactions.
+ * 6. Creates a contract instance (using a minimal Ownable ABI) and calls the owner() function.
+ * 7. Returns a JSON response with { contractName, contractDeployer, contractOwner, imageUrl }.
  *
  * @param {Request} request - The incoming HTTP request.
  * @returns {Promise<Response>} - A JSON response containing the contract metadata or an error message.
@@ -42,18 +50,11 @@ export async function GET(request) {
       return setCorsHeaders(missingResponse);
     }
 
-    // Retrieve the Alchemy API key from environment variables.
-    const alchemyApiKey = process.env.ALCHEMY_API_KEY;
-    if (!alchemyApiKey) {
-      const keyErrorResponse = new Response(
-        JSON.stringify({ error: 'Alchemy API key not configured' }),
-        { status: 500, headers: { 'Content-Type': 'application/json' } }
-      );
-      return setCorsHeaders(keyErrorResponse);
-    }
+    // Use the utility to get the NFT API endpoint URL based on the "network" query parameter.
+    const nftEndpointUrl = getProviderUrlNFTEndpoint(request);
 
-    // Build the Alchemy API URL for getNFTsForCollection with metadata enabled.
-    const alchemyUrl = `https://eth-sepolia.g.alchemy.com/nft/v3/${alchemyApiKey}/getNFTsForCollection?contractAddress=${encodeURIComponent(contractAddress)}&withMetadata=true`;
+    // Build the full Alchemy API URL for getNFTsForCollection with metadata enabled.
+    const alchemyUrl = `${nftEndpointUrl}/getNFTsForCollection?contractAddress=${encodeURIComponent(contractAddress)}&withMetadata=true`;
 
     // Call the Alchemy endpoint.
     const alchemyResponse = await fetch(alchemyUrl);
@@ -67,8 +68,8 @@ export async function GET(request) {
     }
 
     // Parse the response.
-    const data = await alchemyResponse.json();
-    const nfts = data.nfts;
+    const nftData = await alchemyResponse.json();
+    const nfts = nftData.nfts;
     if (!nfts || nfts.length === 0) {
       const noNFTsResponse = new Response(
         JSON.stringify({ error: 'No NFTs found for this contract' }),
@@ -79,23 +80,35 @@ export async function GET(request) {
 
     // Use the first NFT in the collection.
     const nft = nfts[0];
-    const contract = nft.contract || {};
-    const contractName = contract.name || null;
-    const contractDeployer = contract.contractDeployer || null;
+    const contractMeta = nft.contract || {};
+    const contractName = contractMeta.name || null;
+    const contractDeployer = contractMeta.contractDeployer || null;
     
     // Try to get openSeaMetadata.imageUrl; if not available, fall back to nft.image.cachedUrl.
-    let imageUrl = contract.openSeaMetadata ? contract.openSeaMetadata.imageUrl : null;
+    let imageUrl = contractMeta.openSeaMetadata ? contractMeta.openSeaMetadata.imageUrl : null;
     if (!imageUrl) {
       imageUrl = nft.image ? nft.image.cachedUrl : null;
     }
-    
+
+    // Use the utility to get an ethers provider for contract interaction.
+    const provider = getProviderFromInteractWithContract(request);
+    // Define a minimal Ownable ABI.
+    const ownableAbi = [
+      "function owner() view returns (address)"
+    ];
+    // Create a contract instance using the contract address.
+    const contract = new ethers.Contract(contractAddress, ownableAbi, provider);
+    // Call the owner() function.
+    const ownerAddress = await contract.owner();
+
     // Build the result object.
     const result = {
       contractName,
       contractDeployer,
+      contractOwner: ownerAddress,
       imageUrl
     };
-    
+
     // Return the result as JSON.
     const response = new Response(
       JSON.stringify(result),
@@ -103,11 +116,11 @@ export async function GET(request) {
     );
     return setCorsHeaders(response);
   } catch (error) {
-    console.error("Error fetching NFT contract metadata:", error);
-    const errorResponse = new Response(
-      JSON.stringify({ error: 'Server error' }),
+    console.error("Error fetching contract metadata and owner:", error);
+    const errResponse = new Response(
+      JSON.stringify({ error: error.message || 'Server error' }),
       { status: 500, headers: { 'Content-Type': 'application/json' } }
     );
-    return setCorsHeaders(errorResponse);
+    return setCorsHeaders(errResponse);
   }
 }
