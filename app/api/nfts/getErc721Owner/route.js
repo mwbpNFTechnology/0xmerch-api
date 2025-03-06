@@ -1,4 +1,6 @@
 // app/api/nfts/getErc721Owner/route.js
+//TODO: need add await getUserIdFromRequest(request);
+
 
 import { Contract } from 'ethers';
 import { setCorsHeaders } from '../../../lib/utils/cors';

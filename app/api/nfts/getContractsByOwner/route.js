@@ -1,4 +1,5 @@
 // app/api/nfts/getContractsByOwner/route.js
+//TODO: need add await getUserIdFromRequest(request);
 
 import { Contract } from 'ethers';
 import { setCorsHeaders } from '../../../lib/utils/cors';

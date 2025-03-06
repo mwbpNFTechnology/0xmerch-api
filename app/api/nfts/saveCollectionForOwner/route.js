@@ -1,4 +1,6 @@
 // app/api/nfts/saveCollectionForOwner/route.js
+//TODO: need add await getUserIdFromRequest(request);
+
 
 // Import the global CORS helper.
 import { setCorsHeaders } from '../../../lib/utils/cors';
