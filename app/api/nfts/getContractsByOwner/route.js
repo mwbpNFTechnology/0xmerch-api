@@ -2,12 +2,8 @@
 
 import { Contract } from 'ethers';
 import { setCorsHeaders } from '../../../lib/utils/cors';
-import { getProviderFromInteractWithContract } from '../../../lib/utils/blockchainNetworkUtilis';
+import { getProviderFromInteractWithContract, getProviderUrlNFTEndpoint } from '../../../lib/utils/blockchainNetworkUtilis';
 import { getMerchSmertContract, MERCH_ABI, SupportedNetwork } from '../../../config/contractConfig';
-import { getFirestoreInstance } from '../../../lib/utils/serverFirebaseUtils';
-
-// Retrieve the Firestore instance using your centralized Firebase Admin utility.
-const firestore = getFirestoreInstance();
 
 /**
  * Handles preflight OPTIONS requests.
@@ -32,14 +28,15 @@ export async function OPTIONS() {
  * 3. Uses the getProviderFromInteractWithContract utility to build a provider.
  * 4. Retrieves the contract address and ABI via getMerchSmertContract using the normalized network.
  * 5. Instantiates the contract and calls the read function getContractInfosByOwner(ownerAddress).
- * 6. Maps over the raw result to produce an array of objects with keys:
+ * 6. For each returned tuple, it calls the Alchemy NFT endpoint (using getProviderUrlNFTEndpoint)
+ *    to fetch the collection image URL from the first NFT in that collection.
+ * 7. Maps over the raw result to produce an array of objects with keys:
  *    - contractName
  *    - contractAddress
  *    - contractOwner
  *    - royalties (as number)
  *    - uuid0xMERCH
- * 7. For each contract, retrieves the collection image URL from Firestore (from nftCollections/{contractAddress} field imageURL)
- *    and attaches it to the object as "imageURL".
+ *    - imageURL (from the NFT metadata)
  * 8. Returns a JSON response containing the contract infos.
  *
  * @param {Request} request - The incoming HTTP request.
@@ -88,12 +85,30 @@ export async function GET(request) {
     const rawInfos = await contract.getContractInfosByOwner(ownerAddress);
     // rawInfos is assumed to be an array of tuples:
     // [ [contractName, contractAddress, contractOwner, royalties, uuid0xMERCH], ... ]
+    
+    // Get the base NFT endpoint URL (for fetching metadata) based on network.
+    const nftEndpointUrl = getProviderUrlNFTEndpoint(request);
+
+    // Map each tuple to an object with the additional imageURL from Alchemy.
     const contractInfos = await Promise.all(rawInfos.map(async (info) => {
-      // Retrieve imageURL from Firestore document at nftCollections/{contractAddress}
-      const docRef = firestore.doc(`nftCollections/${info[1]}`);
-      const docSnap = await docRef.get();
-      const firebaseData = docSnap.exists ? docSnap.data() : {};
-      const firebaseImageURL = firebaseData ? firebaseData.imageURL : null;
+      // Build the full Alchemy API URL for getNFTsForCollection with metadata enabled for this contract.
+      const alchemyUrl = `${nftEndpointUrl}/getNFTsForCollection?contractAddress=${encodeURIComponent(info[1])}&withMetadata=true`;
+      let imageURL = null;
+      try {
+        const alchemyResponse = await fetch(alchemyUrl);
+        if (alchemyResponse.ok) {
+          const nftData = await alchemyResponse.json();
+          const nfts = nftData.nfts;
+          if (nfts && nfts.length > 0) {
+            const nft = nfts[0];
+            const contractMeta = nft.contract || {};
+            // Use openSeaMetadata.imageUrl if available, else fallback to nft.image.cachedUrl.
+            imageURL = contractMeta.openSeaMetadata.imageUrl ? contractMeta.openSeaMetadata.imageUrl : (nft.image.cachedUrl ? nft.image.cachedUrl : null);
+          }
+        }
+      } catch (e) {
+        console.error(`Error fetching NFT metadata for contract ${info[1]}:`, e);
+      }
 
       return {
         contractName: info[0],
@@ -101,7 +116,7 @@ export async function GET(request) {
         contractOwner: info[2],
         royalties: info[3] !== undefined ? Number(info[3]) : null,
         uuid0xMERCH: info[4],
-        imageURL: firebaseImageURL,
+        imageURL,
       };
     }));
 
