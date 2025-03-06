@@ -4,6 +4,10 @@ import { Contract } from 'ethers';
 import { setCorsHeaders } from '../../../lib/utils/cors';
 import { getProviderFromInteractWithContract } from '../../../lib/utils/blockchainNetworkUtilis';
 import { getMerchSmertContract, MERCH_ABI, SupportedNetwork } from '../../../config/contractConfig';
+import { getFirestoreInstance } from '../../../lib/utils/serverFirebaseUtils';
+
+// Retrieve the Firestore instance using your centralized Firebase Admin utility.
+const firestore = getFirestoreInstance();
 
 /**
  * Handles preflight OPTIONS requests.
@@ -26,13 +30,17 @@ export async function OPTIONS() {
  * 1. Reads the `ownerAddress` and `network` from the URL's query parameters.
  * 2. Validates that both parameters are provided and that the network is supported.
  * 3. Uses the getProviderFromInteractWithContract utility to build a provider.
- * 4. Retrieves the contract address and ABI via getMerchSmertContractInfo using the normalized network.
+ * 4. Retrieves the contract address and ABI via getMerchSmertContract using the normalized network.
  * 5. Instantiates the contract and calls the read function getContractInfosByOwner(ownerAddress).
  * 6. Maps over the raw result to produce an array of objects with keys:
+ *    - contractName
  *    - contractAddress
- *    - ownerAddress
- *    - royalties (serialized to string)
- * 7. Returns a JSON response containing the contract infos.
+ *    - contractOwner
+ *    - royalties (as number)
+ *    - uuid0xMERCH
+ * 7. For each contract, retrieves the collection image URL from Firestore (from nftCollections/{contractAddress} field imageURL)
+ *    and attaches it to the object as "imageURL".
+ * 8. Returns a JSON response containing the contract infos.
  *
  * @param {Request} request - The incoming HTTP request.
  * @returns {Promise<Response>} - A JSON response containing the contract infos or an error message.
@@ -70,7 +78,7 @@ export async function GET(request) {
     // Get provider for contract interactions.
     const provider = getProviderFromInteractWithContract(request);
 
-    // Get the contract address and ABI for merchSmert contract.
+    // Get the contract address and ABI for the merchSmert contract.
     const { contractAddress } = getMerchSmertContract(normalizedNetwork);
 
     // Instantiate the contract.
@@ -78,19 +86,24 @@ export async function GET(request) {
 
     // Call the read function: getContractInfosByOwner(ownerAddress)
     const rawInfos = await contract.getContractInfosByOwner(ownerAddress);
-    // rawInfos is assumed to be an array of tuples, e.g.:
-    // [ [contractAddress, ownerAddress, royalties], ... ]
-    const contractInfos = rawInfos.map(info => ({
-      contractName: info[0],
-      contractAddress: info[1],
-      contractOwner: info[2],
-      // Convert royalties to string (or to number if it's safe and desired)
-      royalties: info[3] !== undefined ? Number(info[3]) : null,
-      uuid0xMERCH: info[4],
+    // rawInfos is assumed to be an array of tuples:
+    // [ [contractName, contractAddress, contractOwner, royalties, uuid0xMERCH], ... ]
+    const contractInfos = await Promise.all(rawInfos.map(async (info) => {
+      // Retrieve imageURL from Firestore document at nftCollections/{contractAddress}
+      const docRef = firestore.doc(`nftCollections/${info[1]}`);
+      const docSnap = await docRef.get();
+      const firebaseData = docSnap.exists ? docSnap.data() : {};
+      const firebaseImageURL = firebaseData ? firebaseData.imageURL : null;
+
+      return {
+        contractName: info[0],
+        contractAddress: info[1],
+        contractOwner: info[2],
+        royalties: info[3] !== undefined ? Number(info[3]) : null,
+        uuid0xMERCH: info[4],
+        imageURL: firebaseImageURL,
+      };
     }));
-
-    //[[pathz.xyz,0xdbbfC2Ca74B4857AD08D6464bcE858a0bD8889B6,0xda45Eaf463D5544Ca3921125eB9fa0633508E1A2,320,kPiilKUZXrVWjJukny8Kcne4R9m1]]
-
 
     const result = { contractInfos };
 
