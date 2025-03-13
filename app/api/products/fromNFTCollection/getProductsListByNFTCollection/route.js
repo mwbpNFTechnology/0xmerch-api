@@ -1,8 +1,7 @@
 import { Contract } from 'ethers';
 import { setCorsHeaders } from '../../../../lib/utils/cors';
 import { getProviderFromInteractWithContract } from '../../../../lib/utils/blockchainNetworkUtilis';
-// (Optional) Uncomment if user identification is needed.
-// import { getUserIdFromRequest } from '../../../../lib/utils/serverFirebaseUtils';
+import { getUserIdFromRequest } from '../../../../lib/utils/serverFirebaseUtils';
 
 import { MERCH_NFT_COLLECTION_PRODUCTS_ABI, getMerchNFTCollectionProductSmertContract } from '../../../../config/contractConfig';
 import { wgiToEth, getPrecent } from '../../../../lib/utils/numberUtils';
@@ -32,20 +31,22 @@ export async function OPTIONS() {
 /**
  * GET endpoint to retrieve products from a contract page.
  *
+ * This endpoint is protected by Firebase authentication. Only authenticated users can call it.
+ *
  * Expects the following query parameters:
  *  - erc721ContractAddress: The ERC721 contract address used as a parameter.
  *  - network: The supported network (e.g., "ethereum" or "sepolia").
  *
  * Process:
- * 1. (Optionally) Await user identification.
+ * 1. Verify the request is authenticated by calling getUserIdFromRequest.
  * 2. Parse and validate query parameters.
  * 3. Build an ethers provider based on the network parameter.
  * 4. Retrieve the corresponding contract address using getMerchNFTCollectionProductSmertContract.
  * 5. Create a contract instance with the MERCH_NFT_COLLECTION_PRODUCTS_ABI.
  * 6. Call the contract's PAGE_SIZE_PRODUCT() function to get the page size.
  * 7. Loop over pages starting at 1, calling getProductsByContractPage() for each page.
- *    After each call, check if the total number of products retrieved equals page * pageSize.
- *    If yes, then call again for the next page; otherwise, break the loop.
+ *    After each call, check if the total number of products retrieved is less than page * pageSize.
+ *    If not, continue to the next page; otherwise, break the loop.
  * 8. Map the combined raw product arrays into objects with the desired key names,
  *    converting values to numbers and using wgiToEth and getPrecent for the price field.
  * 9. Return a JSON response with the combined products data.
@@ -55,8 +56,8 @@ export async function OPTIONS() {
  */
 export async function GET(request) {
   try {
-    // (Optional) Uncomment if you need to retrieve the user id.
-    // await getUserIdFromRequest(request);
+    // Ensure the request is authenticated.
+    await getUserIdFromRequest(request);
 
     const { searchParams } = new URL(request.url);
     const erc721ContractAddress = searchParams.get('erc721ContractAddress');
@@ -91,18 +92,14 @@ export async function GET(request) {
     // Initialize our loop to fetch all pages.
     let allRawProducts = [];
     let page = 1;
-    let callTime = 0;
     while (true) {
-      // Check if the total retrieved equals page * pageSize.
-      // If yes, there might be more products so continue; otherwise, break.
       const rawProducts = await contract.getProductsByContractPage(erc721ContractAddress, page);
       allRawProducts = allRawProducts.concat(rawProducts);
 
+      // If the total fetched products is less than the full batch (page * pageSize), break the loop.
       if (allRawProducts.length < page * pageSize) {
         break;
       }
-
-      
       page++;
     }
 
