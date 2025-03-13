@@ -176,7 +176,7 @@ export async function POST(request) {
       erc721NFTContractAddress: erc721NFTContractAddress.toString().trim(),
       imageUrls, // Attach the array of image URLs.
       createdAt: admin.firestore.FieldValue.serverTimestamp(),
-      createdBy: userId
+      uid: userId
     };
 
     await newProductRef.set(productData);
