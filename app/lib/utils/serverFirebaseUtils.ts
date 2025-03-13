@@ -1,4 +1,3 @@
-// app/lib/utils/serverFirebaseUtils.ts
 import admin from 'firebase-admin';
 
 // Initialize Firebase Admin SDK if it hasn't been initialized yet.
@@ -14,6 +13,8 @@ if (!admin.apps.length) {
       // If the key is stored as a single-line string with escaped newlines, convert them to actual newlines.
       privateKey: process.env.FIREBASE_PRIVATE_KEY.replace(/\\n/g, '\n'),
     }),
+    // Optionally, set the storageBucket here if you want to use the default bucket:
+    // storageBucket: process.env.FIREBASE_STORAGE_BUCKET
   });
 }
 
@@ -46,4 +47,20 @@ export async function getUserIdFromRequest(request: Request): Promise<string> {
  */
 export function getFirestoreInstance() {
   return admin.firestore();
+}
+
+/**
+ * Returns the Firebase Storage bucket instance.
+ *
+ * Expects the environment variable FIREBASE_STORAGE_BUCKET to be defined.
+ *
+ * @returns {admin.storage.Bucket} - The Storage bucket instance.
+ * @throws Error if FIREBASE_STORAGE_BUCKET is not defined.
+ */
+export function getStorageBucket() {
+  const bucketName = process.env.FIREBASE_STORAGE_BUCKET;
+  if (!bucketName) {
+    throw new Error('FIREBASE_STORAGE_BUCKET is not defined in environment variables.');
+  }
+  return admin.storage().bucket(bucketName);
 }
