@@ -7,8 +7,7 @@ import {
   getUserIdFromRequest 
 } from '../../../../lib/utils/serverFirebaseUtils';
 import { 
-  getProviderFromInteractWithContract, 
-  getProviderUrlNFTEndpoint 
+  getProviderFromInteractWithContract
 } from '../../../../lib/utils/blockchainNetworkUtilis';
 import { 
   getMerchSmertContract, 
