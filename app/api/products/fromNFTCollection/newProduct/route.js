@@ -50,10 +50,10 @@ export async function POST(request) {
     // Extract additional fields.
     const walletAddress = formData.get('walletAddress');
     const erc721NFTContractAddress = formData.get('erc721NFTContractAddress');
-    const network = formData.get('network'); // Ensure a network parameter is provided
-
-    // Extract multiple image files (key "images").
-    const imageFiles = formData.getAll('images');
+    
+    // Get network from the URL query parameter instead of FormData.
+    const { searchParams } = new URL(request.url);
+    const network = searchParams.get('network');
 
     // Validate required fields.
     if (
@@ -97,7 +97,7 @@ export async function POST(request) {
 
     // --- Blockchain Check: Verify that the wallet owns the provided ERC721 NFT contract ---
 
-    // Normalize network to lowercase and check supported networks if needed.
+    // Normalize network to lowercase and check supported networks.
     const normalizedNetwork = network.toString().toLowerCase();
     if (!Object.values(SupportedNetwork).includes(normalizedNetwork)) {
       return errorResponse(`Unsupported network: ${network}`, 400);
@@ -126,6 +126,8 @@ export async function POST(request) {
 
     // --- End of blockchain ownership check ---
 
+    // Extract multiple image files (key "images").
+    const imageFiles = formData.getAll('images');
     // Ensure at least one image file was provided.
     if (!imageFiles || imageFiles.length === 0) {
       return errorResponse("No image file provided", 400);
