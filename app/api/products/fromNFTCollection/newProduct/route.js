@@ -1,6 +1,20 @@
 import admin from 'firebase-admin';
+import { Contract } from 'ethers';
 import { setCorsHeaders } from '../../../../lib/utils/cors';
-import { getFirestoreInstance, getStorageBucket, getUserIdFromRequest } from '../../../../lib/utils/serverFirebaseUtils';
+import { 
+  getFirestoreInstance, 
+  getStorageBucket, 
+  getUserIdFromRequest 
+} from '../../../../lib/utils/serverFirebaseUtils';
+import { 
+  getProviderFromInteractWithContract, 
+  getProviderUrlNFTEndpoint 
+} from '../../../../lib/utils/blockchainNetworkUtilis';
+import { 
+  getMerchSmertContract, 
+  MERCH_ABI, 
+  SupportedNetwork 
+} from '../../../../config/contractConfig';
 
 const firestore = getFirestoreInstance();
 
@@ -33,6 +47,11 @@ export async function POST(request) {
     const discount = formData.get('discount');
     const totalStock = formData.get('totalStock');
     const maxQtyPerUser = formData.get('maxQtyPerUser');
+    
+    // Extract additional fields.
+    const walletAddress = formData.get('walletAddress');
+    const erc721NFTContractAddress = formData.get('erc721NFTContractAddress');
+    const network = formData.get('network'); // Ensure a network parameter is provided
 
     // Extract multiple image files (key "images").
     const imageFiles = formData.getAll('images');
@@ -44,7 +63,10 @@ export async function POST(request) {
       ethPrice == null ||
       discount == null ||
       totalStock == null ||
-      maxQtyPerUser == null
+      maxQtyPerUser == null ||
+      !walletAddress ||
+      !erc721NFTContractAddress ||
+      !network
     ) {
       return errorResponse("Missing required fields", 400);
     }
@@ -62,6 +84,48 @@ export async function POST(request) {
     ) {
       return errorResponse("Invalid numeric values", 400);
     }
+
+    // Check if the wallet document exists at users/{userId}/wallets/{walletAddress}
+    const walletDocRef = firestore
+      .collection('users')
+      .doc(userId)
+      .collection('wallets')
+      .doc(walletAddress.toString().trim());
+    const walletDoc = await walletDocRef.get();
+    if (!walletDoc.exists) {
+      return errorResponse("Wallet address not found", 400);
+    }
+
+    // --- Blockchain Check: Verify that the wallet owns the provided ERC721 NFT contract ---
+
+    // Normalize network to lowercase and check supported networks if needed.
+    const normalizedNetwork = network.toString().toLowerCase();
+    if (!Object.values(SupportedNetwork).includes(normalizedNetwork)) {
+      return errorResponse(`Unsupported network: ${network}`, 400);
+    }
+
+    // Get provider for contract interactions.
+    const provider = getProviderFromInteractWithContract(request);
+
+    // Retrieve the merchSmert contract configuration.
+    const { contractAddress: merchContractAddress } = getMerchSmertContract(normalizedNetwork);
+
+    // Instantiate the contract with the configured ABI.
+    const contract = new Contract(merchContractAddress, MERCH_ABI, provider);
+
+    // Call getContractInfosByOwner with the walletAddress.
+    const rawInfos = await contract.getContractInfosByOwner(walletAddress);
+    // rawInfos is assumed to be an array of tuples like:
+    // [ [contractName, contractAddress, contractOwner, royalties, uuid0xMERCH], ... ]
+    const matchingContract = rawInfos.find(info =>
+      info[1].toString().toLowerCase() === erc721NFTContractAddress.toString().toLowerCase()
+    );
+
+    if (!matchingContract) {
+      return errorResponse("The provided wallet does not own the specified ERC721 NFT contract", 400);
+    }
+
+    // --- End of blockchain ownership check ---
 
     // Ensure at least one image file was provided.
     if (!imageFiles || imageFiles.length === 0) {
@@ -109,6 +173,8 @@ export async function POST(request) {
       discount: discountNum,
       totalStock: totalStockNum,
       maxQtyPerUser: maxQtyPerUserNum,
+      walletAddress: walletAddress.toString().trim(),
+      erc721NFTContractAddress: erc721NFTContractAddress.toString().trim(),
       imageUrls, // Attach the array of image URLs.
       createdAt: admin.firestore.FieldValue.serverTimestamp(),
       createdBy: userId
@@ -124,8 +190,6 @@ export async function POST(request) {
     return setCorsHeaders(response);
   } catch (err) {
     console.error("Error processing product upload:", err);
-    // Return the error message as JSON. For example, if authentication fails,
-    // err.message might be "getUserIdFromRequest is not defined".
     return errorResponse(err.message || "Server error", 500);
   }
 }
