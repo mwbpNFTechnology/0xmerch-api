@@ -436,11 +436,6 @@ export function getMerchSmertContract(network: SupportedNetwork): { contractAddr
         "type": "string"
       },
       {
-        "internalType": "string",
-        "name": "_cid",
-        "type": "string"
-      },
-      {
         "internalType": "uint256",
         "name": "_regularPrice",
         "type": "uint256"
@@ -664,11 +659,6 @@ export function getMerchSmertContract(network: SupportedNetwork): { contractAddr
             "type": "string"
           },
           {
-            "internalType": "string",
-            "name": "cid",
-            "type": "string"
-          },
-          {
             "components": [
               {
                 "internalType": "uint256",
@@ -807,11 +797,6 @@ export function getMerchSmertContract(network: SupportedNetwork): { contractAddr
         "type": "string"
       },
       {
-        "internalType": "string",
-        "name": "cid",
-        "type": "string"
-      },
-      {
         "components": [
           {
             "internalType": "uint256",
@@ -845,107 +830,6 @@ export function getMerchSmertContract(network: SupportedNetwork): { contractAddr
       }
     ],
     "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "string",
-        "name": "",
-        "type": "string"
-      },
-      {
-        "internalType": "uint256",
-        "name": "",
-        "type": "uint256"
-      }
-    ],
-    "name": "redeemNFTTokenIdDiscount",
-    "outputs": [
-      {
-        "internalType": "bool",
-        "name": "",
-        "type": "bool"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "string",
-        "name": "_productID",
-        "type": "string"
-      },
-      {
-        "internalType": "string",
-        "name": "_orderID",
-        "type": "string"
-      }
-    ],
-    "name": "releasePayment",
-    "outputs": [],
-    "stateMutability": "nonpayable",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "string",
-        "name": "_productID",
-        "type": "string"
-      }
-    ],
-    "name": "removeProduct",
-    "outputs": [],
-    "stateMutability": "nonpayable",
-    "type": "function"
-  },
-  {
-    "inputs": [],
-    "name": "renounceOwnership",
-    "outputs": [],
-    "stateMutability": "nonpayable",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "uint256",
-        "name": "newPageSizeOrder",
-        "type": "uint256"
-      }
-    ],
-    "name": "setPageSizeOrder",
-    "outputs": [],
-    "stateMutability": "nonpayable",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "uint256",
-        "name": "newPageSizeOrderID",
-        "type": "uint256"
-      }
-    ],
-    "name": "setPageSizeOrderID",
-    "outputs": [],
-    "stateMutability": "nonpayable",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "uint256",
-        "name": "newPageSizeProduct",
-        "type": "uint256"
-      }
-    ],
-    "name": "setPageSizeProduct",
-    "outputs": [],
-    "stateMutability": "nonpayable",
     "type": "function"
   },
   {
