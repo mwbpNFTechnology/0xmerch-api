@@ -6,6 +6,9 @@ import { getProviderFromInteractWithContract } from '../../../../lib/utils/block
 
 import { MERCH_NFT_COLLECTION_PRODUCTS_ABI, getMerchNFTCollectionProductSmertContract } from '../../../../config/contractConfig';
 import { wgiToEth, getPrecent } from '../../../../lib/utils/numberUtils';
+import { getFirestoreInstance } from '../../../../lib/utils/serverFirebaseUtils';
+
+const firestore = getFirestoreInstance();
 
 /**
  * A helper function that safely serializes objects with BigInt values.
@@ -48,7 +51,9 @@ export async function OPTIONS() {
  *    If yes, then call again for the next page; otherwise, break the loop.
  * 8. Map the combined raw product arrays into objects with the desired key names,
  *    converting values to numbers and using wgiToEth and getPrecent for the price field.
- * 9. Return a JSON response with the combined products data.
+ * 9. For each product, fetch additional details from Firestore at
+ *    productsBlockchain/{productID} (description, title, imageUrls).
+ * 10. Return a JSON response with the combined products data.
  *
  * @param {Request} request - The incoming HTTP request.
  * @returns {Promise<Response>} - A JSON response with the products or an error message.
@@ -56,7 +61,7 @@ export async function OPTIONS() {
 export async function GET(request) {
   try {
     // (Optional) Uncomment if you need to retrieve the user id.
-    await getUserIdFromRequest(request);
+    // await getUserIdFromRequest(request);
 
     const { searchParams } = new URL(request.url);
     const erc721ContractAddress = searchParams.get('erc721ContractAddress');
@@ -92,21 +97,19 @@ export async function GET(request) {
     let allRawProducts = [];
     let page = 1;
     while (true) {
-      // Check if the total retrieved equals page * pageSize.
-      // If yes, there might be more products so continue; otherwise, break.
+      // Get products from current page.
       const rawProducts = await contract.getProductsByContractPage(erc721ContractAddress, page);
       allRawProducts = allRawProducts.concat(rawProducts);
 
+      // If total number of products retrieved is less than page * pageSize, break out.
       if (allRawProducts.length < page * pageSize) {
         break;
       }
-
-      
       page++;
     }
 
-    // Map raw product arrays to a structured object with proper number conversions.
-    const products = allRawProducts.map((product) => ({
+    // Map raw product arrays to structured objects.
+    let products = allRawProducts.map((product) => ({
       nftCollectionAddress: product[0],
       timestampCreated: Number(product[1]),
       productID: product[2],
@@ -122,7 +125,30 @@ export async function GET(request) {
       ordersID: product[8]
     }));
 
-    // Build and return the result.
+    // For each product, retrieve additional details from Firestore.
+    products = await Promise.all(products.map(async (product) => {
+      try {
+        const productDoc = await firestore.collection('productsBlockchain').doc(product.productID).get();
+        if (productDoc.exists) {
+          console.log("productDoc.exists");
+          const data = productDoc.data();
+          return {
+            ...product,
+            productDetails: {
+              title: data.title || null,
+              description: data.description || null,
+              imageUrls: data.imageUrls || []
+            }
+          };
+        }
+        return { ...product, productDetails: null };
+      } catch (e) {
+        console.error(`Error retrieving details for product ${product.productID}:`, e);
+        return { ...product, productDetails: null };
+      }
+    }));
+
+    // Build and return the final result.
     const result = { products };
     const response = new Response(safeStringify(result), {
       status: 200,
