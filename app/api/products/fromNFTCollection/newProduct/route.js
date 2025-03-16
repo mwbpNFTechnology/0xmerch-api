@@ -40,6 +40,7 @@ export async function POST(request) {
     const formData = await request.formData();
 
     // Extract text fields.
+    const productID = formData.get('productID');
     const title = formData.get('title');
     const description = formData.get('description');
     const ethPrice = formData.get('ethPrice');
@@ -57,6 +58,7 @@ export async function POST(request) {
 
     // Validate required fields.
     if (
+      !productID ||
       !title ||
       !description ||
       ethPrice == null ||
@@ -133,11 +135,8 @@ export async function POST(request) {
       return errorResponse("No image file provided", 400);
     }
 
-    // Generate a sequential product ID (document ID/product name).
-    const productsSnapshot = await firestore.collection('productsBlockchain').get();
-    const productCount = productsSnapshot.size;
-    const productNumber = String(productCount + 1);
-    const productID = `blockProduct-${productNumber}`;
+    // Use the productID provided in the request.
+    const finalProductID = productID.toString().trim();
 
     // Retrieve the storage bucket using our helper.
     const bucket = getStorageBucket();
@@ -151,8 +150,8 @@ export async function POST(request) {
       const fileName = imageFile.name;
       const fileMimeType = imageFile.type;
       const uniqueFileName = `${Date.now()}-${fileName}`;
-      // Save images under: blockProduct/{userId}/{productID}/{uniqueFileName}
-      const fileUpload = bucket.file(`blockProduct/${userId}/${productID}/${uniqueFileName}`);
+      // Save images under: blockProduct/{userId}/{finalProductID}/{uniqueFileName}
+      const fileUpload = bucket.file(`blockProduct/${userId}/${finalProductID}/${uniqueFileName}`);
 
       await fileUpload.save(fileBuffer, {
         metadata: { contentType: fileMimeType },
@@ -164,10 +163,10 @@ export async function POST(request) {
       imageUrls.push(imageUrl);
     }
 
-    // Create a new product document in Firestore with the productID as its document ID.
-    const newProductRef = firestore.collection('productsBlockchain').doc(productID);
+    // Create a new product document in Firestore with the productID from the request.
+    const newProductRef = firestore.collection('productsBlockchain').doc(finalProductID);
     const productData = {
-      productID, // Also used as product name.
+      productID: finalProductID,
       title: title.toString().trim(),
       description: description.toString().trim(),
       ethPrice: ethPriceNum,
@@ -183,7 +182,7 @@ export async function POST(request) {
 
     await newProductRef.set(productData);
 
-    const responseBody = { success: true, productId: productID, imageUrls };
+    const responseBody = { success: true, productId: finalProductID, imageUrls };
     const response = new Response(JSON.stringify(responseBody), {
       status: 200,
       headers: { 'Content-Type': 'application/json' },
