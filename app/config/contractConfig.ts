@@ -351,7 +351,7 @@ export function getMerchSmertContract(network: SupportedNetwork): { contractAddr
  */
  export const MERCH_NFT_COLLECTION_PRODUCTS_SMART_CONTRACT_ADDRESS: Record<SupportedNetwork, string> = {
   [SupportedNetwork.Ethereum]: "",
-  [SupportedNetwork.Sepolia]: "0x7079d066A4960e0E4499f0915a55f09457EE4416",
+  [SupportedNetwork.Sepolia]: "0x212C72A79550c4DCf8dFFCdE7C369200CfCf8E26",
 };
 
 /**
